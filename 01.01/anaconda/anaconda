@@ -1,0 +1,50 @@
+conda update -n base conda
+conda update --all
+
+tensorFlow
+conda create -n tf python=3.9
+
+conda env remove -n tf
+
+-- 활성화
+conda deactivate
+
+-- 비활성화
+conda activate tf
+
+-- intel GPU일 경우 해당 환경 설치 필요
+-- Tensorflow 가상환경에 설치 (cpu라고 되어 있지만 gpu 작동 전에 꼭 필요한 절차)
+pip install tensorflow-cpu==2.10
+
+-- Tensorflow Directml Plugin 하기
+pip install tensorflow-directml-plugin
+
+-- tensorflow import 안될 경우
+pip install "numpy<2"
+
+-- python에 input을 입력시
+/* 
+INPUT:
+from tensorflow.python.client import device_lib
+device_lib.list_local_devices()
+*/
+/*
+OUTPUT:
+[name: "/device:CPU:0"
+device_type: "CPU"
+memory_limit: 268435456
+locality {
+}
+incarnation: 3135045046148937540
+xla_global_id: -1
+, name: "/device:GPU:0"
+device_type: "GPU"
+memory_limit: 7315358100
+locality {
+  bus_id: 1
+}
+incarnation: 13114725192568811530
+physical_device_desc: "device: 0, name: DML, pci bus id: <undefined>"
+xla_global_id: -1
+]
+ */
