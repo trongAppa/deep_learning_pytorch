@@ -6,23 +6,23 @@ conda create -n tf python=3.9
 
 conda env remove -n tf
 
--- È°¼ºÈ­
+-- í™œì„±í™”
 conda deactivate
 
--- ºñÈ°¼ºÈ­
+-- ë¹„í™œì„±í™”
 conda activate tf
 
--- intel GPUÀÏ °æ¿ì ÇØ´ç È¯°æ ¼³Ä¡ ÇÊ¿ä
--- Tensorflow °¡»óÈ¯°æ¿¡ ¼³Ä¡ (cpu¶ó°í µÇ¾î ÀÖÁö¸¸ gpu ÀÛµ¿ Àü¿¡ ²À ÇÊ¿äÇÑ ÀıÂ÷)
+-- intel GPUì¼ ê²½ìš° í•´ë‹¹ í™˜ê²½ ì„¤ì¹˜ í•„ìš”
+-- Tensorflow ê°€ìƒí™˜ê²½ì— ì„¤ì¹˜ (cpuë¼ê³  ë˜ì–´ ìˆì§€ë§Œ gpu ì‘ë™ ì „ì— ê¼­ í•„ìš”í•œ ì ˆì°¨)
 pip install tensorflow-cpu==2.10
 
--- Tensorflow Directml Plugin ÇÏ±â
+-- Tensorflow Directml Plugin í•˜ê¸°
 pip install tensorflow-directml-plugin
 
--- tensorflow import ¾ÈµÉ °æ¿ì
+-- tensorflow import ì•ˆë  ê²½ìš°
 pip install "numpy<2"
 
--- python¿¡ inputÀ» ÀÔ·Â½Ã
+-- pythonì— inputì„ ì…ë ¥ì‹œ
 /* 
 INPUT:
 from tensorflow.python.client import device_lib
