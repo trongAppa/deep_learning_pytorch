@@ -1,0 +1,25 @@
+﻿-- nltk pip 설치
+pip install nltk
+
+-- python에서 정상 install 확인
+in[1] : import nltk
+
+in[2] : nltk.__version__
+Out[2]: '3.8.1'
+
+-- nltk_data 다운로드 팝업 나옴
+in[3] : nltk.download()
+설치경로 : D:\devTest\nltk_data - 변경가능
+
+-- 코엔엘파이(KoNLPy) pip 설치
+pip install konlpy
+
+-- 코엔엘파이 설치 도중 Microsoft Visual C++ 14.0 error 발생시
+http://visualstudio.microsoft.com/ko/downloads/#build-tools-for-visual-studio-2019 다운로드 후 
+C++를 사용한 데스크톱 개발 항목을 선택하고 Install
+
+-- python에서 정상 install 확인
+In [1]: import konlpy
+
+In [2]: konlpy.__version__
+Out[2]: '0.6.0'

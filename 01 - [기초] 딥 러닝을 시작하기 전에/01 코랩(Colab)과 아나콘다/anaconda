@@ -1,16 +1,29 @@
+-- 아나콘다 초기셋팅
 conda update -n base conda
 conda update --all
 
-tensorFlow
-conda create -n tf python=3.9
-
-conda env remove -n tf
-
--- 활성화
-conda deactivate
+-- 아나콘다 환경 설정하나 만들과 활성화 하기 / 파이썬 버전에 맞게 설치가 안될 시 가상환경 만들기
+conda create --name tf
+conda activate tf
+conda search python
+conda install python=3.9.23
 
 -- 비활성화
+conda deactivate
+
+-- 활성화
 conda activate tf
+
+-- ipython 설치
+pip install ipython
+
+
+----------- 안깔려서 이것 저것 해봤는데 삭제 후 다시 시도 하니 잘 됨 -----------
+tensorFlow
+-- 아나콘다 환경 생성
+conda create -n tf python=3.7
+-- 해당 환경 삭제
+conda env remove -n tf
 
 -- intel GPU일 경우 해당 환경 설치 필요
 -- Tensorflow 가상환경에 설치 (cpu라고 되어 있지만 gpu 작동 전에 꼭 필요한 절차)
