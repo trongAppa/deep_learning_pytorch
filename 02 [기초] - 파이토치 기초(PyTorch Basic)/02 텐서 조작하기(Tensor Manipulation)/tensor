@@ -1,0 +1,7 @@
+﻿-- 벡터, 행렬 그리고 텐서(Vector, Matrix and Tensor) - 딥 러닝을 위한 가장 기본적인 수학적 지식인 벡터, 행렬, 텐서
+벡터 : 1차원 텐서 / 행렬 : 2차원 텐서
+
+-- 넘파이 훑어보기(Numpy Review) - 파이토치는 파이썬 패키지 넘파이(Numpy)와 유사
+-- 파이토치 텐서 선언하기(PyTorch Tensor Allocation)
+-- 행렬 곱셈(Maxtrix Multiplication)
+-- 다른 오퍼레이션들(Other Basic Ops)
