@@ -428,6 +428,7 @@ torch.Size([3, 1])
 # view(), squeeze(), unsqueeze()는 텐서의 "원소 수를 그대로 유지"하면서 모양과 차원을 조절합니다.
 
 8) 타입 캐스팅(Type Casting) - 텐서 자료형
+- 텐서_자료형.png 이미지 참조
 In [35]:
 lt = torch.LongTensor([1, 2, 3, 4])
 print(lt)
