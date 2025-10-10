@@ -1,0 +1,305 @@
+-- 데이터에 대한 이해(Data Definition)
+1) 훈련 데이터셋과 테스트 데이터셋
+ - 예측을 위해 사용하는 데이터를 훈련 데이터셋(training dataset)
+ - 학습이 끝난 후, 이 모델이 얼마나 잘 작동하는지 판별하는 데이터셋을 테스트 데이터셋(test dataset)
+ 
+2) 훈련 데이터셋의 구성
+ - 모델을 학습시키기 위한 데이터는 파이토치의 텐서의 형태(torch.tensor)를 가지고 있어야함
+ - 입력과 출력을 각기 다른 텐서에 저장할 필요가 있음
+ - 보편적으로 입력은 x, 출력은 y를 사용하여 표기
+In [1]: import torch
+ 
+In [2]:
+x_train = torch.FloatTensor([[1], [2], [3]])
+y_train = torch.FloatTensor([[2], [4], [6]])
+
+-- 가설(Hypothesis) 수립
+- 머신 러닝에서 식을 세울때 이 식을 가설(Hypothesis)
+- 보통 머신 러닝에서 가설은 임의로 추측해서 세워보는 식일수도 있고, 경험적으로 알고 있는 식일 수도 있습니다. 그리고 맞는 가설이 아니라고 판단되면 계속 수정해나가게 되는 식이기도 합니다.
+- 선형 회귀란 학습 데이터와 가장 잘 맞는 하나의 직선을 찾는 일
+
+y = Wx + b
+
+가설 H를 따서 y대신 사용
+H(x) = Wx + b
+W는 가중치(Weight), b는 편향(bias)
+
+-- 손실 계산하기(Compute loss) - 비용 함수(Cost function)에 대한 이해
+- 비용 함수(cost function) = 손실 함수(loss function) = 오차 함수(error function) = 목적 함수(objective function)
+평균 제곱 오차를 W와 b에 의한 비용 함수(Cost function)로 재정의
+cost(W, b) = \frac{1}{n} \sum_{i=1}^{n} \left[y^{(i)} - H(x^{(i)})\right]^2
+
+-- 옵티마이저 - 경사 하강법(Gradient Descent)
+- 비용 함수(Cost Function)의 값을 최소로 하는 W와 b를 찾는 방법에 대해서 배울 차례입니다. 이때 사용되는 것이 옵티마이저(Optimizer) 알고리즘 = 최적화 알고리즘
+- 옵티마이저 알고리즘을 통해 적절한 W와 b를 찾아내는 과정을 머신 러닝에서 학습(training)
+- 가장 기본적인 옵티마이저 알고리즘인 경사 하강법(Gradient Descent)
+- 기울기 W가 무한대로 커지면 커질 수록 cost의 값 또한 무한대로 커지고, 반대로 기울기 W가 무한대로 작아져도 cost의 값은 무한대로 커집니다. 
+- 맨 아래의 볼록한 부분(cost 값)을 향해 점차 W의 값을 수정해나갑니다.
+- cost가 최소화가 되는 지점은 접선의 기울기가 0이 되는 지점이며, 또한 미분값이 0이 되는 지점
+- 경사 하강법의 아이디어는 비용 함수(Cost function)를 미분하여 현재 W에서의 접선의 기울기를 구하고, 접선의 기울기가 낮은 방향으로 W의 값을 변경하는 작업을 반복하는 것
+gradient = \frac{∂cost(W)}{∂W}
+
+- 기울기가 음수일 때(Negative gradient) : W의 값이 증가
+W := W - α × (-gradient) = W + α × gradient
+
+- 기울기가 양수일 때(Pogitive gradient): W의 값이 감소
+W := W - α × (+gradient)
+
+- 아래의 수식은 접선의 기울기가 음수거나, 양수일 때 모두 접선의 기울기가 0인 방향으로 W의 값을 조정
+W := W - α\frac{∂}{∂W}cost(W)
+
+- 학습률 a가 지나치게 높은 값을 가질 때, 접선의 기울기가 0이 되는 W를 찾아가는 것이 아니라 cost의 값이 발산하는 상황을 보여줍니다. 반대로 학습률 a가 지나치게 낮은 값을 가지면 학습 속도가 느려지므로 적당한 a의 값을 찾아내는 것도 중요합니다.
+
+- b는 배제시키고 최적의 W를 찾아내는 것에만 초점을 맞추어 경사 하강법의 원리에 대해서 배웠는데, 실제 경사 하강법은 W와 b에 대해서 동시에 경사 하강법을 수행하면서 최적의 W와 b의 값을 찾아갑니다.
+
+- 가설, 비용 함수, 옵티마이저는 머신 러닝 분야에서 사용되는 포괄적 개념입니다. 풀고자하는 각 문제에 따라 가설, 비용 함수, 옵티마이저는 전부 다를 수 있으며 선형 회귀에 가장 적합한 비용 함수는 평균 제곱 오차, 옵티마이저는 경사 하강법입니다.
+
+-- 파이토치로 구현
+-- 기본 셋팅
+In [1]:
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+import torch.optim as optim
+
+In [2]:
+# 현재 실습하고 있는 파이썬 코드를 재실행해도 다음에도 같은 결과가 나오도록 랜덤 시드(random seed)를 줍니다.
+torch.cuda.manual_seed(1)
+
+-- 변수 선언
+In [3]:
+x_train = torch.FloatTensor([[1], [2], [3]])
+y_train = torch.FloatTensor([[2], [4], [6]])
+
+In [4]:
+print(x_train)
+print(x_train.shape)
+
+Out[4]:
+tensor([[1.],
+        [2.],
+        [3.]])
+torch.Size([3, 1])
+
+In [5]:
+print(y_train)
+print(y_train.shape)
+
+Out[5]:
+tensor([[2.],
+        [4.],
+        [6.]])
+torch.Size([3, 1])
+
+-- 가중치와 편향의 초기화
+In [6]:
+# 가중치 W를 0으로 초기화하고 학습을 통해 값이 변경되는 변수임을 명시함.
+W = torch.zeros(1, requires_grad=True) 
+# 가중치 W를 출력
+print(W) 
+
+Out[6]: tensor([0.], requires_grad=True)
+
+In [7]:
+b = torch.zeros(1, requires_grad=True)
+print(b)
+
+Out[7]: tensor([0.], requires_grad=True)
+
+In [8]:
+hypothesis = x_train * W + b
+print(hypothesis)
+
+Out[8]:
+tensor([[0.],
+        [0.],
+        [0.]], grad_fn=<AddBackward0>)
+
+In [9]:
+cost = torch.mean((hypothesis - y_train) ** 2) 
+print(cost)
+
+Out[9]: tensor(18.6667, grad_fn=<MeanBackward0>)
+
+-- 경사 하강법 구현하기
+- 'SGD'는 경사 하강법의 일종
+- lr은 학습률(learning rate)
+In [10]: optimizer = optim.SGD([W, b], lr=0.01)
+
+In [11]: 
+# gradient를 0으로 초기화
+optimizer.zero_grad() 
+# 비용 함수를 미분하여 gradient 계산
+cost.backward() 
+# W와 b를 업데이트
+optimizer.step() 
+
+-- 전체코드
+In [12]:
+# 데이터
+x_train = torch.FloatTensor([[1], [2], [3]])
+y_train = torch.FloatTensor([[2], [4], [6]])
+# 모델 초기화
+W = torch.zeros(1, requires_grad=True)
+b = torch.zeros(1, requires_grad=True)
+# optimizer 설정
+optimizer = optim.SGD([W, b], lr=0.01)
+
+nb_epochs = 2000 # 원하는만큼 경사 하강법을 반복
+for epoch in range(nb_epochs + 1):
+
+    # H(x) 계산
+    hypothesis = x_train * W + b
+
+    # cost 계산
+    cost = torch.mean((hypothesis - y_train) ** 2)
+
+    # cost로 H(x) 개선
+    optimizer.zero_grad()
+    cost.backward()
+    optimizer.step()
+
+    # 100번마다 로그 출력
+    if epoch % 100 == 0:
+        print('Epoch {:4d}/{} W: {:.3f}, b: {:.3f} Cost: {:.6f}'.format(
+            epoch, nb_epochs, W.item(), b.item(), cost.item()
+        ))
+
+Out[12]:
+Epoch    0/2000 W: 0.187, b: 0.080 Cost: 18.666666
+Epoch  100/2000 W: 1.746, b: 0.578 Cost: 0.048171
+Epoch  200/2000 W: 1.800, b: 0.454 Cost: 0.029767
+Epoch  300/2000 W: 1.843, b: 0.357 Cost: 0.018394
+Epoch  400/2000 W: 1.876, b: 0.281 Cost: 0.011366
+Epoch  500/2000 W: 1.903, b: 0.221 Cost: 0.007024
+Epoch  600/2000 W: 1.924, b: 0.174 Cost: 0.004340
+Epoch  700/2000 W: 1.940, b: 0.136 Cost: 0.002682
+Epoch  800/2000 W: 1.953, b: 0.107 Cost: 0.001657
+Epoch  900/2000 W: 1.963, b: 0.084 Cost: 0.001024
+Epoch 1000/2000 W: 1.971, b: 0.066 Cost: 0.000633
+Epoch 1100/2000 W: 1.977, b: 0.052 Cost: 0.000391
+Epoch 1200/2000 W: 1.982, b: 0.041 Cost: 0.000242
+Epoch 1300/2000 W: 1.986, b: 0.032 Cost: 0.000149
+Epoch 1400/2000 W: 1.989, b: 0.025 Cost: 0.000092
+Epoch 1500/2000 W: 1.991, b: 0.020 Cost: 0.000057
+Epoch 1600/2000 W: 1.993, b: 0.016 Cost: 0.000035
+Epoch 1700/2000 W: 1.995, b: 0.012 Cost: 0.000022
+Epoch 1800/2000 W: 1.996, b: 0.010 Cost: 0.000013
+Epoch 1900/2000 W: 1.997, b: 0.008 Cost: 0.000008
+Epoch 2000/2000 W: 1.997, b: 0.006 Cost: 0.000005
+
+-- optimizer.zero_grad()가 필요한 이유
+In [1]:
+import torch
+w = torch.tensor(2.0, requires_grad=True)
+
+nb_epochs = 20
+for epoch in range(nb_epochs + 1):
+
+  z = 2*w
+
+  z.backward()
+  print('수식을 w로 미분한 값 : {}'.format(w.grad))
+
+Out[1]:
+수식을 w로 미분한 값 : 2.0
+수식을 w로 미분한 값 : 4.0
+수식을 w로 미분한 값 : 6.0
+수식을 w로 미분한 값 : 8.0
+수식을 w로 미분한 값 : 10.0
+수식을 w로 미분한 값 : 12.0
+수식을 w로 미분한 값 : 14.0
+수식을 w로 미분한 값 : 16.0
+수식을 w로 미분한 값 : 18.0
+수식을 w로 미분한 값 : 20.0
+수식을 w로 미분한 값 : 22.0
+수식을 w로 미분한 값 : 24.0
+수식을 w로 미분한 값 : 26.0
+수식을 w로 미분한 값 : 28.0
+수식을 w로 미분한 값 : 30.0
+수식을 w로 미분한 값 : 32.0
+수식을 w로 미분한 값 : 34.0
+수식을 w로 미분한 값 : 36.0
+수식을 w로 미분한 값 : 38.0
+수식을 w로 미분한 값 : 40.0
+수식을 w로 미분한 값 : 42.0
+
+- optimizer.zero_grad()를 통해 미분값을 계속 0으로 초기화
+
+-- torch.manual_seed()를 하는 이유
+-- torch.manual_seed()를 사용한 프로그램의 결과는 다른 컴퓨터에서 실행시켜도 동일한 결과를 얻을 수 있음
+-- torch.manual_seed()는 난수 발생 순서와 값을 동일하게 보장해준다는 특징
+
+In [1]: import torch
+
+In [2]:
+torch.manual_seed(3)
+print('랜덤 시드가 3일 때')
+for i in range(1,3):
+  print(torch.rand(1))
+
+Out[2]:
+랜덤 시드가 3일 때
+tensor([0.0043])
+tensor([0.1056])
+
+In [3]:
+torch.manual_seed(5)
+print('랜덤 시드가 5일 때')
+for i in range(1,3):
+  print(torch.rand(1))
+
+Out[3]:
+랜덤 시드가 5일 때
+tensor([0.8303])
+tensor([0.1261])
+
+In [4]:
+torch.manual_seed(3)
+print('랜덤 시드가 다시 3일 때')
+for i in range(1,3):
+  print(torch.rand(1))
+
+Out[4]:
+랜덤 시드가 다시 3일 때
+tensor([0.0043])
+tensor([0.1056])
+
+-- 텐서에는 requires_grad라는 속성이 있습니다. 이것을 True로 설정하면 자동 미분 기능이 적용
+-- 선형 회귀부터 신경망과 같은 복잡한 구조에서 파라미터들이 모두 이 기능이 적용
+-- requires_grad = True가 적용된 텐서에 연산을 하면, 계산 그래프가 생성되며 backward 함수를 호출하면 그래프로부터 자동으로 미분이 계산
+
+-- 자동 미분(Autograd) 실습하기
+In [1]: import torch
+
+In [2]: w = torch.tensor(2.0, requires_grad=True)
+
+In [3]:
+y = w**2
+z = 2*y + 5
+
+In [4]: z.backward()
+
+In [5]: print('수식을 w로 미분한 값 : {}'.format(w.grad))
+
+Out[5]: 수식을 w로 미분한 값 : 8.0
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
