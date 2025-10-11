@@ -1,0 +1,442 @@
+-- 단순 선형 회귀 구현하기
+In [1]:
+#필요도구 import
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+torch.cuda.manual_seed(1)
+
+In [2]:
+# 데이터
+x_train = torch.FloatTensor([[1], [2], [3]])
+y_train = torch.FloatTensor([[2], [4], [6]])
+
+- 선형 회귀 모델을 구현
+In [3]:
+# 모델을 선언 및 초기화. 단순 선형 회귀이므로 input_dim=1, output_dim=1.
+model = nn.Linear(1,1)
+
+In [4]: print(list(model.parameters()))
+
+- W와 b를 출력
+Out[4]:
+[Parameter containing:
+tensor([[-0.1196]], requires_grad=True), Parameter containing:
+tensor([-0.6226], requires_grad=True)]
+
+In [5]:
+# optimizer 설정. 경사 하강법 SGD를 사용하고 learning rate를 의미하는 lr은 0.01
+optimizer = torch.optim.SGD(model.parameters(), lr=0.01) 
+
+In [6]:
+# 전체 훈련 데이터에 대해 경사 하강법을 2,000회 반복
+nb_epochs = 2000
+for epoch in range(nb_epochs+1):
+
+    # H(x) 계산
+    prediction = model(x_train)
+
+    # cost 계산
+    cost = F.mse_loss(prediction, y_train) # <== 파이토치에서 제공하는 평균 제곱 오차 함수
+
+    # cost로 H(x) 개선하는 부분
+    # gradient를 0으로 초기화
+    optimizer.zero_grad()
+    # 비용 함수를 미분하여 gradient 계산
+    cost.backward() # backward 연산
+    # W와 b를 업데이트
+    optimizer.step()
+
+    if epoch % 100 == 0:
+    # 100번마다 로그 출력
+      print('Epoch {:4d}/{} Cost: {:.6f}'.format(
+          epoch, nb_epochs, cost.item()
+      ))
+	  
+Out[6]:
+Epoch    0/2000 Cost: 26.632116
+Epoch  100/2000 Cost: 0.005973
+Epoch  200/2000 Cost: 0.003691
+Epoch  300/2000 Cost: 0.002281
+Epoch  400/2000 Cost: 0.001409
+Epoch  500/2000 Cost: 0.000871
+Epoch  600/2000 Cost: 0.000538
+Epoch  700/2000 Cost: 0.000333
+Epoch  800/2000 Cost: 0.000206
+Epoch  900/2000 Cost: 0.000127
+Epoch 1000/2000 Cost: 0.000078
+Epoch 1100/2000 Cost: 0.000048
+Epoch 1200/2000 Cost: 0.000030
+Epoch 1300/2000 Cost: 0.000019
+Epoch 1400/2000 Cost: 0.000011
+Epoch 1500/2000 Cost: 0.000007
+Epoch 1600/2000 Cost: 0.000004
+Epoch 1700/2000 Cost: 0.000003
+Epoch 1800/2000 Cost: 0.000002
+Epoch 1900/2000 Cost: 0.000001
+Epoch 2000/2000 Cost: 0.000001
+
+- 최적화 확인
+In [7]:
+# 임의의 입력 4를 선언
+new_var =  torch.FloatTensor([[4.0]]) 
+# 입력한 값 4에 대해서 예측값 y를 리턴받아서 pred_y에 저장
+pred_y = model(new_var) # forward 연산
+# y = 2x 이므로 입력이 4라면 y가 8에 가까운 값이 나와야 제대로 학습이 된 것
+print("훈련 후 입력이 4일 때의 예측값 :", pred_y)
+
+Out[7]:
+훈련 후 입력이 4일 때의 예측값 : tensor([[7.9984]], grad_fn=<AddmmBackward0>)
+
+- 학습 후 값 출력
+In [8]: print(list(model.parameters()))
+
+- W와 b의 값이 2와 0에 가까운 값이 도출 
+Out[8]:
+[Parameter containing:
+tensor([[1.9991]], requires_grad=True), Parameter containing:
+tensor([0.0021], requires_grad=True)]
+
+- 식에 입력 x로부터 예측된 y를 얻는 것을 forward 연산이라고 합니다.
+- 학습 전, prediction = model(x_train)은 x_train으로부터 예측값을 리턴하므로 forward 연산입니다.
+- 학습 후, pred_y = model(new_var)는 임의의 값 new_var로부터 예측값을 리턴하므로 forward 연산입니다.
+- 학습 과정에서 비용 함수를 미분하여 기울기를 구하는 것을 backward 연산이라고 합니다.
+- cost.backward()는 비용 함수로부터 기울기를 구하라는 의미이며 backward 연산입니다.
+
+-- 다중 선형 회귀 구현하기
+In [1]:
+#필요도구 import
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+torch.cuda.manual_seed(1)
+
+In [2]:
+# 데이터
+x_train = torch.FloatTensor([[73, 80, 75],
+                             [93, 88, 93],
+                             [89, 91, 90],
+                             [96, 98, 100],
+                             [73, 66, 70]])
+y_train = torch.FloatTensor([[152], [185], [180], [196], [142]])
+
+In [3]:
+# 모델을 선언 및 초기화. 다중 선형 회귀이므로 input_dim=3, output_dim=1.
+model = nn.Linear(3,1)
+
+In [4]:
+print(list(model.parameters()))
+
+- W와 b를 출력
+- 첫번째 출력되는 것이 3개의 w고, 두번째 출력되는 것이 b에 해당
+- 두 값 모두 현재는 랜덤 초기화, 두 출력 결과 모두 학습의 대상이므로 requires_grad=True
+Out[4]:
+[Parameter containing:
+tensor([[-0.5719, -0.4298, -0.3847]], requires_grad=True), Parameter containing:
+tensor([0.3392], requires_grad=True)]
+
+- 옵티마이저를 정의 - model.parameters()를 사용하여 3개의 w와 b를 전달, 학습률(learning rate)은 0.00001(파이썬 코드로는 1e-5)
+- 0.01로 하지 않는 이유는 기울기가 발산 
+In [5]: optimizer = torch.optim.SGD(model.parameters(), lr=1e-5)
+
+In [6]:
+nb_epochs = 2000
+for epoch in range(nb_epochs+1):
+
+    # H(x) 계산
+    prediction = model(x_train)
+    # model(x_train)은 model.forward(x_train)와 동일함.
+
+    # cost 계산
+    cost = F.mse_loss(prediction, y_train) # <== 파이토치에서 제공하는 평균 제곱 오차 함수
+
+    # cost로 H(x) 개선하는 부분
+    # gradient를 0으로 초기화
+    optimizer.zero_grad()
+    # 비용 함수를 미분하여 gradient 계산
+    cost.backward()
+    # W와 b를 업데이트
+    optimizer.step()
+
+    if epoch % 100 == 0:
+    # 100번마다 로그 출력
+      print('Epoch {:4d}/{} Cost: {:.6f}'.format(
+          epoch, nb_epochs, cost.item()
+      ))
+
+Out[6]:
+Epoch    0/2000 Cost: 84423.585938
+Epoch  100/2000 Cost: 2.332038
+Epoch  200/2000 Cost: 2.228856
+Epoch  300/2000 Cost: 2.131054
+Epoch  400/2000 Cost: 2.038367
+Epoch  500/2000 Cost: 1.950507
+Epoch  600/2000 Cost: 1.867225
+Epoch  700/2000 Cost: 1.788293
+Epoch  800/2000 Cost: 1.713446
+Epoch  900/2000 Cost: 1.642520
+Epoch 1000/2000 Cost: 1.575272
+Epoch 1100/2000 Cost: 1.511505
+Epoch 1200/2000 Cost: 1.451070
+Epoch 1300/2000 Cost: 1.393763
+Epoch 1400/2000 Cost: 1.339419
+Epoch 1500/2000 Cost: 1.287898
+Epoch 1600/2000 Cost: 1.239043
+Epoch 1700/2000 Cost: 1.192695
+Epoch 1800/2000 Cost: 1.148747
+Epoch 1900/2000 Cost: 1.107088
+Epoch 2000/2000 Cost: 1.067542
+
+- 학습모델 테스트
+In [7]:
+# 임의의 입력 [73, 80, 75]를 선언
+new_var =  torch.FloatTensor([[73, 80, 75]]) 
+# 입력한 값 [73, 80, 75]에 대해서 예측값 y를 리턴받아서 pred_y에 저장
+pred_y = model(new_var) 
+print("훈련 후 입력이 73, 80, 75일 때의 예측값 :", pred_y)
+
+Out[7]: 훈련 후 입력이 73, 80, 75일 때의 예측값 : tensor([[152.3200]], grad_fn=<AddmmBackward0>)
+
+- 모델 테스트
+In [8]: print(list(model.parameters()))
+
+Out[8]:
+[Parameter containing:
+tensor([[0.6662, 0.5759, 0.7635]], requires_grad=True), Parameter containing:
+tensor([0.3556], requires_grad=True)]
+
+-- 모델을 클래스로 구현하기
+In [9]:
+# 모델을 선언 및 초기화. 단순 선형 회귀이므로 input_dim=1, output_dim=1.
+model = nn.Linear(1,1)
+
+In [10]:
+class LinearRegressionModel(nn.Module): # torch.nn.Module을 상속받는 파이썬 클래스
+    def __init__(self): #
+        super().__init__()
+        self.linear = nn.Linear(1, 1) # 단순 선형 회귀이므로 input_dim=1, output_dim=1.
+
+    def forward(self, x):
+        return self.linear(x)
+
+- 클래스(class) 형태의 모델은 nn.Module 을 상속 받음
+- __init__()에서 모델의 구조와 동작을 정의하는 생성자를 정의
+- 파이썬에서 객체가 갖는 속성값을 초기화하는 역할로, 객체가 생성될 때 자동으로 호출
+- super() 함수를 부르면 여기서 만든 클래스는 nn.Module 클래스의 속성들을 가지고 초기화
+- forward() 함수는 모델이 학습데이터를 입력받아서 forward 연산을 진행시키는 함수
+- forward() 함수는 model 객체를 데이터와 함께 호출하면 자동으로 실행
+- model(입력 데이터)와 같은 형식으로 객체를 호출하면 자동으로 forward 연산이 수행
+
+In [11]: model = LinearRegressionModel()
+
+-- 다중 모델 클래스로 구현
+In [12]:
+# 모델을 선언 및 초기화. 다중 선형 회귀이므로 input_dim=3, output_dim=1.
+model = nn.Linear(3,1)
+
+In [13]:
+class MultivariateLinearRegressionModel(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.linear = nn.Linear(3, 1) # 다중 선형 회귀이므로 input_dim=3, output_dim=1.
+
+    def forward(self, x):
+        return self.linear(x)
+
+In [14]: model = MultivariateLinearRegressionModel()
+
+-- 단순 선형 회귀 클래스로 구현하기
+In [1]:
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+torch.cuda.manual_seed(1)
+
+In [2]:
+# 데이터
+x_train = torch.FloatTensor([[1], [2], [3]])
+y_train = torch.FloatTensor([[2], [4], [6]])
+
+In [3]:
+class LinearRegressionModel(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.linear = nn.Linear(1, 1)
+
+    def forward(self, x):
+        return self.linear(x)
+
+In [4]:
+model = LinearRegressionModel()
+# optimizer 설정. 경사 하강법 SGD를 사용하고 learning rate를 의미하는 lr은 0.01
+optimizer = torch.optim.SGD(model.parameters(), lr=0.01)
+
+In [5]:
+# 전체 훈련 데이터에 대해 경사 하강법을 2,000회 반복
+nb_epochs = 2000
+for epoch in range(nb_epochs+1):
+
+    # H(x) 계산
+    prediction = model(x_train)
+
+    # cost 계산
+    cost = F.mse_loss(prediction, y_train) # <== 파이토치에서 제공하는 평균 제곱 오차 함수
+
+    # cost로 H(x) 개선하는 부분
+    # gradient를 0으로 초기화
+    optimizer.zero_grad()
+    # 비용 함수를 미분하여 gradient 계산
+    cost.backward() # backward 연산
+    # W와 b를 업데이트
+    optimizer.step()
+
+    if epoch % 100 == 0:
+    # 100번마다 로그 출력
+      print('Epoch {:4d}/{} Cost: {:.6f}'.format(
+          epoch, nb_epochs, cost.item()
+      ))
+
+Out[5]:
+Epoch    0/2000 Cost: 33.495914
+Epoch  100/2000 Cost: 0.088308
+Epoch  200/2000 Cost: 0.054569
+Epoch  300/2000 Cost: 0.033720
+Epoch  400/2000 Cost: 0.020837
+Epoch  500/2000 Cost: 0.012876
+Epoch  600/2000 Cost: 0.007957
+Epoch  700/2000 Cost: 0.004917
+Epoch  800/2000 Cost: 0.003038
+Epoch  900/2000 Cost: 0.001877
+Epoch 1000/2000 Cost: 0.001160
+Epoch 1100/2000 Cost: 0.000717
+Epoch 1200/2000 Cost: 0.000443
+Epoch 1300/2000 Cost: 0.000274
+Epoch 1400/2000 Cost: 0.000169
+Epoch 1500/2000 Cost: 0.000105
+Epoch 1600/2000 Cost: 0.000065
+Epoch 1700/2000 Cost: 0.000040
+Epoch 1800/2000 Cost: 0.000025
+Epoch 1900/2000 Cost: 0.000015
+Epoch 2000/2000 Cost: 0.000009
+
+- 최적화 확인
+In [6]:
+# 임의의 입력 4를 선언
+new_var =  torch.FloatTensor([[4.0]]) 
+# 입력한 값 4에 대해서 예측값 y를 리턴받아서 pred_y에 저장
+pred_y = model(new_var) # forward 연산
+# y = 2x 이므로 입력이 4라면 y가 8에 가까운 값이 나와야 제대로 학습이 된 것
+print("훈련 후 입력이 4일 때의 예측값 :", pred_y)
+
+Out[6]:
+훈련 후 입력이 4일 때의 예측값 : tensor([[7.9939]], grad_fn=<AddmmBackward0>)
+
+- 모델 테스트
+In [7]: print(list(model.parameters()))
+
+Out[7]: 
+[Parameter containing:
+tensor([[1.9964]], requires_grad=True), Parameter containing:
+tensor([0.0081], requires_grad=True)]
+
+-- 다중 선형 회귀 클래스로 구현하기
+In [1]:
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+torch.cuda.manual_seed(1)
+
+In [2]:
+# 데이터
+x_train = torch.FloatTensor([[73, 80, 75],
+                             [93, 88, 93],
+                             [89, 91, 90],
+                             [96, 98, 100],
+                             [73, 66, 70]])
+y_train = torch.FloatTensor([[152], [185], [180], [196], [142]])
+
+In [3]:
+class MultivariateLinearRegressionModel(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.linear = nn.Linear(3, 1) # 다중 선형 회귀이므로 input_dim=3, output_dim=1.
+
+    def forward(self, x):
+        return self.linear(x)
+
+model = MultivariateLinearRegressionModel()
+
+In [4]: print(list(model.parameters()))
+
+Out[4]: 
+[Parameter containing:
+tensor([[ 0.4617, -0.5622, -0.1037]], requires_grad=True), Parameter containing:
+tensor([0.1848], requires_grad=True)]
+
+In [5]: optimizer = torch.optim.SGD(model.parameters(), lr=1e-5)
+
+In [6]:
+nb_epochs = 2000
+for epoch in range(nb_epochs+1):
+
+    # H(x) 계산
+    prediction = model(x_train)
+    # model(x_train)은 model.forward(x_train)와 동일함.
+
+    # cost 계산
+    cost = F.mse_loss(prediction, y_train) # <== 파이토치에서 제공하는 평균 제곱 오차 함수
+
+    # cost로 H(x) 개선하는 부분
+    # gradient를 0으로 초기화
+    optimizer.zero_grad()
+    # 비용 함수를 미분하여 gradient 계산
+    cost.backward()
+    # W와 b를 업데이트
+    optimizer.step()
+
+    if epoch % 100 == 0:
+    # 100번마다 로그 출력
+      print('Epoch {:4d}/{} Cost: {:.6f}'.format(
+          epoch, nb_epochs, cost.item()
+      ))
+
+Out[6]:
+Epoch    0/2000 Cost: 35920.234375
+Epoch  100/2000 Cost: 2.176296
+Epoch  200/2000 Cost: 2.071628
+Epoch  300/2000 Cost: 1.972476
+Epoch  400/2000 Cost: 1.878550
+Epoch  500/2000 Cost: 1.789553
+Epoch  600/2000 Cost: 1.705269
+Epoch  700/2000 Cost: 1.625404
+Epoch  800/2000 Cost: 1.549749
+Epoch  900/2000 Cost: 1.478084
+Epoch 1000/2000 Cost: 1.410181
+Epoch 1100/2000 Cost: 1.345861
+Epoch 1200/2000 Cost: 1.284933
+Epoch 1300/2000 Cost: 1.227186
+Epoch 1400/2000 Cost: 1.172506
+Epoch 1500/2000 Cost: 1.120695
+Epoch 1600/2000 Cost: 1.071607
+Epoch 1700/2000 Cost: 1.025109
+Epoch 1800/2000 Cost: 0.981046
+Epoch 1900/2000 Cost: 0.939311
+Epoch 2000/2000 Cost: 0.899753
+
+- 학습모델 테스트
+In [7]:
+# 임의의 입력 [73, 80, 75]를 선언
+new_var =  torch.FloatTensor([[73, 80, 75]]) 
+# 입력한 값 [73, 80, 75]에 대해서 예측값 y를 리턴받아서 pred_y에 저장
+pred_y = model(new_var) 
+print("훈련 후 입력이 73, 80, 75일 때의 예측값 :", pred_y)
+
+Out[7]: 훈련 후 입력이 73, 80, 75일 때의 예측값 : tensor([[150.1740]], grad_fn=<AddmmBackward0>)
+
+- 모델 테스트
+In [8]: print(list(model.parameters()))
+
+Out[8]:
+[Parameter containing:
+tensor([[1.0997, 0.3012, 0.6080]], requires_grad=True), Parameter containing:
+tensor([0.1939], requires_grad=True)]
