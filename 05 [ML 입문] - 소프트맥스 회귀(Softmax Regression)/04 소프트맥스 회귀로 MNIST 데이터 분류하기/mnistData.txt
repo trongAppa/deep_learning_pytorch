@@ -1,0 +1,260 @@
+﻿MNIST 데이터에 대해서 이해하고, 파이토치(PyTorch)로 소프트맥스 회귀를 구현하여 MNIST 데이터를 분류하는 실습을 진행
+
+1) MNIST 데이터 이해하기
+MNIST는 숫자 0부터 9까지의 이미지로 구성된 손글씨 데이터셋
+데이터는 과거에 우체국에서 편지의 우편 번호를 인식하기 위해서 만들어진 훈련 데이터
+총 60,000개의 훈련 데이터와 레이블, 총 10,000개의 테스트 데이터와 레이블로 구성
+레이블은 0부터 9까지 총 10개
+
+MNIST 문제는 손글씨로 적힌 숫자 이미지가 들어오면, 그 이미지가 무슨 숫자인지 맞추는 문제
+숫자 5의 이미지가 입력으로 들어오면 이게 숫자 5다! 라는 것을 맞춰야하지만 기계에게는 어려움
+
+각각의 이미지는 아래와 같이 28 픽셀 × 28 픽셀의 이미지(MNIST1.png)
+문제를 풀기 위해 여기서는 28 픽셀 × 28 픽셀 = 784 픽셀이므로, 각 이미지를 총 784의 원소를 가진 벡터로 변경
+
+784개의 특성을 가진 샘플이 되는데, 이는 앞서 우리가 풀었던 그 어떤 문제들보다 특성이 굉장히 많은 샘플
+
+784차원의 벡터로 만드는 코드
+
+for X, Y in data_loader:
+  # 입력 이미지를 [batch_size × 784]의 크기로 reshape
+  # 레이블은 원-핫 인코딩
+  X = X.view(-1, 28*28)
+
+X는 for문에서 호출될 때는 (배치 크기 × 1 × 28 × 28)의 크기를 가지지만, view를 통해서 (배치 크기 × 784)의 크기로 변환
+
+2) 토치비전(torchvision) 소개하기
+torchvision은 유명한 데이터셋들, 이미 구현되어져 있는 유명한 모델들, 일반적인 이미지 전처리 도구들을 포함하고 있는 패키지
+torchvision에 어떤 데이터셋들(datasets)과 모델들(models) 그리고 어떤 전처리 방법들(transforms)을 제공하고 있는지 보여줌
+
+링크 : https://pytorch.org/docs/stable/torchvision/index.html
+
+자연어 처리를 위해서는 토치텍스트(torchtext)라는 패키지
+
+torchvision 설치 필요
+
+pip install torchvision
+
+3) 분류기 구현을 위한 사전 설정
+
+In [1]:
+import torch
+import torchvision.datasets as dsets
+import torchvision.transforms as transforms
+from torch.utils.data import DataLoader
+import torch.nn as nn
+import matplotlib.pyplot as plt
+import random
+
+GPU 연산이 가능하다면 GPU 연산을 하고, 그렇지 않다면 CPU 연산
+
+In [2]:
+USE_CUDA = torch.cuda.is_available() # GPU를 사용가능하면 True, 아니라면 False를 리턴
+device = torch.device("cuda" if USE_CUDA else "cpu") # GPU 사용 가능하면 사용하고 아니면 CPU 사용
+print("다음 기기로 학습합니다:", device)
+
+Out[2]:
+다음 기기로 학습합니다: cpu
+
+구글의 Colab에서 '런타임 > 런타임 유형 변경 > 하드웨어 가속기 > GPU'를 선택하면 USE_CUDA의 값이 True가 되면서 '다음 기기로 학습합니다: cuda'라는 출력
+
+GPU로 연산하겠다는 의미입니다. 반면에 '하드웨어 가속기 > None'을 선택하면 USE_CUDA의 값이 False가 되면서 '다음 기기로 학습합니다: cpu'라는 출력
+
+CPU로 연산하겠다는 의미, 위의 방법은 앞으로 자주 쓰이게되므로 기억
+
+랜덤 시드를 고정
+
+In [3]:
+# for reproducibility
+random.seed(777)
+torch.manual_seed(777)
+if device == 'cuda':
+    torch.cuda.manual_seed_all(777)
+
+하이퍼파라미터를 변수
+
+In [4]:
+# hyperparameters
+training_epochs = 15
+batch_size = 100
+
+4) MNIST 분류기 구현하기
+torchvision.datasets.dsets.MNIST를 사용하여 MNIST 데이터셋을 불러올 수 있음
+
+In [5]:
+# MNIST dataset
+mnist_train = dsets.MNIST(root='MNIST_data/',
+                          train=True,
+                          transform=transforms.ToTensor(),
+                          download=True)
+
+mnist_test = dsets.MNIST(root='MNIST_data/',
+                         train=False,
+                         transform=transforms.ToTensor(),
+                         download=True)
+
+첫번째 인자 root는 MNIST 데이터를 다운로드 받을 경로
+번째 인자 train은 인자로 True를 주면, MNIST의 훈련 데이터를 리턴받으며 False를 주면 테스트 데이터를 리턴
+세번째 인자 transform은 현재 데이터를 파이토치 텐서로 변환
+네번째 인자 download는 해당 경로에 MNIST 데이터가 없다면 다운로드 받겠다는 의미
+
+404 error 발생시? 문제 없음
+
+데이터를 다운로드했다면 앞서 미니 배치와 데이터로드 챕터에서 학습했던 데이터로더(DataLoader)를 사용
+
+In [6]:
+# dataset loader
+data_loader = DataLoader(dataset=mnist_train,
+                         batch_size=batch_size, # 배치 크기는 100
+                         shuffle=True,
+                         drop_last=True)
+
+첫번째 인자인 dataset은 로드할 대상을 의미
+두번째 인자인 batch_size는 배치 크기
+shuffle은 매 에포크마다 미니 배치를 셔플할 것인지의 여부
+drop_last는 마지막 배치를 버리는지 여부
+
+drop_last를 하는 이유를 이해하기 위해서 1,000개의 데이터가 있다고 했을 때, 배치 크기가 128이라고 해봅시다. 1,000을 128로 나누면 총 7개가 나오고 나머지로 104개가 남습니다. 이때 104개를 마지막 배치로 한다고 하였을 때 128개를 충족하지 못하였으므로 104개를 그냥 버릴 수도 있습니다. 이때 마지막 배치를 버리려면 drop_last=True를 해주면 됩니다. 이는 다른 미니 배치보다 개수가 적은 마지막 배치를 경사 하강법에 사용하여 마지막 배치가 상대적으로 과대 평가되는 현상을 막아줌
+
+모델을 설계(input_dim은 784이고, output_dim은 10)
+
+In [7]:
+# MNIST data image of shape 28 * 28 = 784
+linear = nn.Linear(784, 10, bias=True).to(device)
+
+to() 함수는 연산을 어디서 수행할지를 정함, 모델의 매개변수를 지정한 장치의 메모리로 전달, 
+CPU를 사용할 경우에는 필요가 없지만, GPU를 사용하려면 to('cuda')를 해 줄 필요존재
+아무것도 지정하지 않은 경우에는 CPU 연산
+
+bias는 편향 b를 사용할 것인지를 나타냄
+기본값은 True이므로 굳이 할 필요는 없지만 명시적으로 True
+비용 함수와 옵티마이저를 정의
+
+In [8]:
+# 비용 함수와 옵티마이저 정의
+criterion = nn.CrossEntropyLoss().to(device) # 내부적으로 소프트맥스 함수를 포함하고 있음.
+optimizer = torch.optim.SGD(linear.parameters(), lr=0.1)
+
+소프트맥스 회귀를 배울 때는 torch.nn.functional.cross_entropy()를 사용하였으나 여기서는 torch.nn.CrossEntropyLoss()을 사용
+둘 다 파이토치에서 제공하는 크로스 엔트로피 함수로 둘 다 소프트맥스 함수를 포함
+
+In [9]:
+for epoch in range(training_epochs): # 앞서 training_epochs의 값은 15로 지정함.
+    avg_cost = 0
+    total_batch = len(data_loader)
+
+    for X, Y in data_loader:
+        # 배치 크기가 100이므로 아래의 연산에서 X는 (100, 784)의 텐서가 된다.
+        X = X.view(-1, 28 * 28).to(device)
+        # 레이블은 원-핫 인코딩이 된 상태가 아니라 0 ~ 9의 정수.
+        Y = Y.to(device)
+
+        optimizer.zero_grad()
+        hypothesis = linear(X)
+        cost = criterion(hypothesis, Y)
+        cost.backward()
+        optimizer.step()
+
+        avg_cost += cost / total_batch
+
+    print('Epoch:', '%04d' % (epoch + 1), 'cost =', '{:.9f}'.format(avg_cost))
+
+print('Learning finished')
+
+Out[9]:
+Epoch: 0001 cost = 0.535150588
+Epoch: 0002 cost = 0.359577715
+Epoch: 0003 cost = 0.331264257
+Epoch: 0004 cost = 0.316404670
+Epoch: 0005 cost = 0.307106972
+Epoch: 0006 cost = 0.300456554
+Epoch: 0007 cost = 0.294933408
+Epoch: 0008 cost = 0.290956169
+Epoch: 0009 cost = 0.287074119
+Epoch: 0010 cost = 0.284515619
+Epoch: 0011 cost = 0.281914055
+Epoch: 0012 cost = 0.279526889
+Epoch: 0013 cost = 0.277636588
+Epoch: 0014 cost = 0.275874794
+Epoch: 0015 cost = 0.274422735
+Learning finished
+
+training_epochs의 값은 15로 설정되어 있으며, 모델은 총 15번의 에포크 동안 학습
+avg_cost는 에포크 동안의 평균 비용을 저장하는 변수
+total_batch는 에포크당 수행할 배치(batch) 수를 계산
+data_loader는 미니 배치 학습을 위해 데이터를 반복적으로 제공하는 역할
+
+루프 내부에서는 각 배치마다 입력 데이터 X와 레이블 Y를 받아옴
+X는 이미지 데이터로서 (100, 784) 크기의 텐서로 변환 
+배치 크기 100에 28x28 픽셀의 이미지가 일렬로 펼쳐진 상태를 나타냄
+데이터와 레이블 Y는 모델 학습을 위해 지정된 장치(device)로 전송
+
+옵티마이저의 기울기 정보를 초기화
+모델의 가설(hypothesis)을 계산
+linear(X)는 모델의 순전파(forward) 과정을 수행하여 예측 값을 계산
+손실 함수(criterion)를 사용하여 예측 값과 실제 레이블 Y 간의 비용(cost)을 계산
+이 비용은 모델의 성능을 나타내며, 비용이 작을수록 모델의 예측이 실제 값에 가까워짐
+
+cost.backward()를 호출하여 역전파(backpropagation)를 수행하고, 기울기를 계산
+옵티마이저의 step()을 호출하여 모델의 파라미터(가중치와 편향)를 업데이트
+
+각 배치의 비용을 avg_cost에 누적하여 에포크당 평균 비용을 계산하고, 에포크가 끝날 때마다 현재 에포크 번호와 평균 비용을 출력
+모든 에포크가 종료되면 "Learning finished" 메시지를 출력하여 학습이 완료
+
+학습된 모델을 테스트 데이터로 평가하고, 테스트 데이터에서 임의의 이미지를 선택하여 모델이 해당 이미지를 어떻게 예측하는지 시각적으로 확인
+
+In [10]:
+# 테스트 데이터를 사용하여 모델을 테스트한다.
+with torch.no_grad(): # torch.no_grad()를 하면 gradient 계산을 수행하지 않는다.
+    X_test = mnist_test.test_data.view(-1, 28 * 28).float().to(device)
+    Y_test = mnist_test.test_labels.to(device)
+
+    prediction = linear(X_test)
+    correct_prediction = torch.argmax(prediction, 1) == Y_test
+    accuracy = correct_prediction.float().mean()
+    print('Accuracy:', accuracy.item())
+
+    # MNIST 테스트 데이터에서 무작위로 하나를 뽑아서 예측을 해본다
+    r = random.randint(0, len(mnist_test) - 1)
+    X_single_data = mnist_test.test_data[r:r + 1].view(-1, 28 * 28).float().to(device)
+    Y_single_data = mnist_test.test_labels[r:r + 1].to(device)
+
+    print('Label: ', Y_single_data.item())
+    single_prediction = linear(X_single_data)
+    print('Prediction: ', torch.argmax(single_prediction, 1).item())
+
+    plt.imshow(mnist_test.test_data[r:r + 1].view(28, 28), cmap='Greys', interpolation='nearest')
+    plt.show()
+
+Out[10]:
+D:\devTest\anaconda3\envs\tf\lib\site-packages\torchvision\datasets\mnist.py:80: UserWarning: test_data has been renamed data
+  warnings.warn("test_data has been renamed data")
+D:\devTest\anaconda3\envs\tf\lib\site-packages\torchvision\datasets\mnist.py:70: UserWarning: test_labels has been renamed targets
+  warnings.warn("test_labels has been renamed targets")
+Accuracy: 0.8883000016212463
+Label:  8
+Prediction:  3
+
+Prediction: 이미지와 다를 수 있음
+
+평가 모드 활성화
+- with torch.no_grad(): 블록 내에서는 기울기 계산을 하지 않도록 설정
+- 모델을 테스트할 때 필요 없는 기울기 계산을 방지하여 메모리와 연산 효율을 높임
+
+테스트 데이터 준비
+- mnist_test.test_data는 테스트 데이터셋의 이미지 데이터를 포함하며, view(-1, 28 * 28)를 통해 28x28 크기의 이미지를 일렬로 펼쳐 (1, 784) 형태로 변환
+- .float() 메서드를 통해 데이터를 실수형으로 변환하고, .to(device)로 모델과 동일한 장치(CPU나 GPU)에 배치
+- mnist_test.test_labels는 해당 데이터셋의 레이블(정답)을 포함
+
+모델 예측 및 정확도 계산
+- linear(X_test)를 통해 테스트 데이터에 대한 모델의 예측을 수행
+- torch.argmax(prediction, 1)은 각 이미지에 대해 예측된 클래스 레이블을 반환하며, 이 값이 실제 레이블 Y_test와 동일한지 여부를 correct_prediction 변수에 저장
+- correct_prediction.float().mean()를 통해 전체 테스트 데이터셋에 대한 정확도를 계산하고 출력
+
+임의의 테스트 샘플 예측
+- random.randint(0, len(mnist_test) - 1)을 사용하여 테스트 데이터셋에서 임의의 샘플을 선택
+- 선택된 이미지를 모델에 입력하여 예측하고, 실제 레이블(Y_single_data)과 모델의 예측 결과(single_prediction)를 출력
+
+이미지 시각화
+- plt.imshow()를 사용하여 선택된 이미지를 시각적으로 노출
+- cmap='Greys'는 이미지를 회색조로 표시하고, interpolation='nearest'는 이미지를 확대할 때 보간을 최소화하여 원본의 형태를 유지
