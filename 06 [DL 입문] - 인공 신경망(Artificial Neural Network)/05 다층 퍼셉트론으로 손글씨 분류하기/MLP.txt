@@ -1,0 +1,176 @@
+﻿1. 숫자 필기 데이터 소개
+사이킷런 패키지에서 제공하는 분류용 예제 데이터
+0부터 9까지의 숫자를 손으로 쓴 이미지 데이터로 load_digits() 명령으로 로드
+각 이미지는 0부터 15까지의 명암을 가지는 8 × 8 = 64 픽셀 해상도의 흑백 이미지
+
+load_digits()를 통해 이미지 데이터를 로드
+로드한 전체 데이터를 digits에 저장
+
+In [1]:
+%matplotlib inline
+import matplotlib.pyplot as plt # 시각화를 위한 맷플롯립
+from sklearn.datasets import load_digits
+digits = load_digits() # 1,979개의 이미지 데이터 로드
+
+첫번째 샘플을 출력
+images[인덱스]를 사용하면 해당 인덱스의 이미지를 행렬로서 출력
+
+In [2]:
+print(digits.images[0])
+
+Out[2]:
+[[ 0.  0.  5. 13.  9.  1.  0.  0.]
+ [ 0.  0. 13. 15. 10. 15.  5.  0.]
+ [ 0.  3. 15.  2.  0. 11.  8.  0.]
+ [ 0.  4. 12.  0.  0.  8.  8.  0.]
+ [ 0.  5.  8.  0.  0.  9.  8.  0.]
+ [ 0.  4. 11.  0.  1. 12.  7.  0.]
+ [ 0.  2. 14.  5. 10. 12.  0.  0.]
+ [ 0.  0.  6. 13. 10.  0.  0.  0.]]
+ 
+8 × 8 행렬로 출력
+0을 흰색 도화지, 0보다 큰 숫자들을 검은색 점이라고 상상해보면 숫자 0의 실루엣
+
+In [3]:
+print(digits.target[0])
+
+Out[3]:
+0
+
+샘플이 몇 개 있는지 확인
+
+In [4]:
+print('전체 샘플의 수 : {}'.format(len(digits.images)))
+
+Out[4]:
+전체 샘플의 수 : 1797
+
+전체 샘플 중에서 상위 5개의 샘플만 시각화
+
+In [5]:
+images_and_labels = list(zip(digits.images, digits.target))
+for index, (image, label) in enumerate(images_and_labels[:5]): # 5개의 샘플만 출력
+    plt.subplot(2, 5, index + 1)
+    plt.axis('off')
+    plt.imshow(image, cmap=plt.cm.gray_r, interpolation='nearest')
+    plt.title('sample: %i' % label)
+plt.show()
+	
+Out[5]:
+sample1.png 참고
+
+In [6]:
+for i in range(5):
+  print(i,'번 인덱스 샘플의 레이블 : ',digits.target[i])
+  
+Out[6]:
+0 번 인덱스 샘플의 레이블 :  0
+1 번 인덱스 샘플의 레이블 :  1
+2 번 인덱스 샘플의 레이블 :  2
+3 번 인덱스 샘플의 레이블 :  3
+4 번 인덱스 샘플의 레이블 :  4
+
+
+훈련 데이터와 레이블을 각각 X, Y에 저장
+digits.images는 모든 샘플을 8 × 8 행렬로 저장
+더 나은 방법은 digts.data를 사용(8 × 8 행렬을 전부 64차원의 벡터로 변환해서 저장한 상태)
+digits.data를 이용해서 첫번째 샘플을 출력
+
+In [7]:
+print(digits.data[0])
+
+Out[7]:
+[ 0.  0.  5. 13.  9.  1.  0.  0.  0.  0. 13. 15. 10. 15.  5.  0.  0.  3.
+ 15.  2.  0. 11.  8.  0.  0.  4. 12.  0.  0.  8.  8.  0.  0.  5.  8.  0.
+  0.  9.  8.  0.  0.  4. 11.  0.  1. 12.  7.  0.  0.  2. 14.  5. 10. 12.
+  0.  0.  0.  0.  6. 13. 10.  0.  0.  0.]
+  
+8 × 8 행렬이 아니라 64차원의 벡터로 저장
+X로 저장하고, 레이블을 Y에 저장
+
+In [8]:
+X = digits.data # 이미지. 즉, 특성 행렬
+Y = digits.target # 각 이미지에 대한 레이블
+
+2. 다층 퍼셉트론 분류기 만들기
+
+In [9]:
+import torch
+import torch.nn as nn
+from torch import optim
+
+In [10]:
+# 모델 정의: 순차적인 레이어 구조
+model = nn.Sequential(
+    nn.Linear(64, 32), # 입력층: 64, 첫 번째 은닉층: 32
+    nn.ReLU(),         # 활성화 함수: ReLU
+    nn.Linear(32, 16), # 첫 번째 은닉층: 32, 두 번째 은닉층: 16
+    nn.ReLU(),         # 활성화 함수: ReLU
+    nn.Linear(16, 10)  # 두 번째 은닉층: 16, 출력층: 10 (클래스의 개수)
+)
+
+PyTorch를 사용하여 다층 퍼셉트론(Multi-Layer Perceptron, MLP) 모델을 정의
+nn.Sequential을 사용하여 모델의 레이어들을 순차적으로 쌓아올리는 구조로 구현
+
+첫 번째 레이어 (nn.Linear(64, 32))
+- 입력층으로, 입력 데이터의 특성(feature) 수가 64개인 경우를 가정 / 
+레이어는 입력 데이터를 받아 32개의 출력을 생성 / 첫 번째 은닉층의 역할
+
+첫 번째 활성화 함수 (nn.ReLU())
+- 첫 번째 은닉층의 출력을 비선형적으로 변환하기 위해 ReLU(Rectified Linear Unit) 활성화 함수가 적용 / ReLU는 입력이 양수일 경우 그대로 반환하고, 음수일 경우 0을 반환하는 비선형 함수로, 딥러닝 모델의 성능을 개선하는 데 널리 사용
+
+두 번째 레이어 (nn.Linear(32, 16))
+- 두 번째 은닉층으로, 이전 레이어의 출력(32개)을 받아 16개의 출력으로 변환
+
+두 번째 활성화 함수 (nn.ReLU())
+- 두 번째 은닉층의 출력에 대해서도 ReLU 활성화 함수가 적용
+ / 모델의 비선형성을 유지하고 학습을 효과적으로 수행
+
+세 번째 레이어 (nn.Linear(16, 10))
+- 세 번째 은닉층이자 출력층 / 이전 레이어의 출력(16개)을 받아 최종적으로 10개의 클래스로 출력 / 모델의 최종 예측을 나타내며, 다중 클래스 분류 문제에서 각 클래스에 대한 예측값을 반환
+
+In [11]:
+# 입력 데이터 X와 레이블 Y를 텐서로 변환
+X = torch.tensor(X, dtype=torch.float32)
+Y = torch.tensor(Y, dtype=torch.int64)
+
+loss_fn = nn.CrossEntropyLoss() # 이 비용 함수는 소프트맥스 함수를 포함하고 있음.
+
+optimizer = optim.Adam(model.parameters())
+
+losses = []
+
+# 총 100번의 에포크 동안 모델 학습
+for epoch in range(100):
+  optimizer.zero_grad()      # 옵티마이저의 기울기 초기화
+  y_pred = model(X)          # 순전파 연산으로 예측값 계산
+  loss = loss_fn(y_pred, Y)  # 손실 함수로 비용 계산
+  loss.backward()            # 역전파 연산으로 기울기 계산
+  optimizer.step()           # 옵티마이저를 통해 파라미터 업데이트
+
+  # 10번째 에포크마다 현재 에포크와 손실 값 출력
+  if epoch % 10 == 0:
+    print('Epoch {:4d}/{} Cost: {:.6f}'.format(
+            epoch, 100, loss.item()
+        ))
+
+  # 손실 값을 리스트에 추가하여 추적
+  losses.append(loss.item())
+
+Out[11]:
+Epoch    0/100 Cost: 2.580758
+Epoch   10/100 Cost: 2.188680
+Epoch   20/100 Cost: 1.992992
+Epoch   30/100 Cost: 1.732687
+Epoch   40/100 Cost: 1.437324
+Epoch   50/100 Cost: 1.119483
+Epoch   60/100 Cost: 0.833540
+Epoch   70/100 Cost: 0.609786
+Epoch   80/100 Cost: 0.452410
+Epoch   90/100 Cost: 0.348154
+
+optimizer.zero_grad()를 사용해 이전 학습에서 남은 기울기 정보를 초기화
+model(X)는 모델에 입력 데이터 X를 넣어 예측 결과 y_pred를 생성
+예측값과 실제 데이터 Y를 비교해 loss_fn 함수로 손실 값을 계산하고, loss.backward()를 통해 이 손실을 기반으로 모델의 파라미터에 대한 기울기를 업데이트
+optimizer.step()이 모델의 파라미터를 실제로 업데이트하여 다음 에포크의 학습에 반영
+에포크가 10의 배수일 때마다 현재의 에포크 수와 손실 값을 출력하여 학습의 진행 상황을 추적
